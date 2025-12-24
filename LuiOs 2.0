@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>LUIMA 2.0</title>
+    <style>
+        :root { --accent: #1ba1e2; --bg: #000; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI Light', 'Segoe UI', sans-serif; user-select: none; margin: 0; padding: 0; }
+        body, html { height: 100%; background: #000; color: #fff; overflow: hidden; perspective: 1000px; }
+
+        /* STATUS & ACTION CENTER */
+        #tray { position: fixed; top: 0; width: 100%; height: 30px; display: flex; justify-content: flex-end; align-items: center; padding: 0 15px; z-index: 10000; font-size: 12px; font-weight: bold; }
+        #action-center { position: fixed; top: -100%; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 11000; transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); padding: 50px 20px; border-bottom: 4px solid var(--accent); }
+        #action-center.active { transform: translateY(90%); }
+
+        /* VOLUME BAR */
+        #vol-bar { position: fixed; top: -70px; left: 0; width: 100%; height: 60px; background: #1a1a1a; z-index: 12000; transition: 0.3s; display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--accent); }
+        #vol-bar.show { top: 0; }
+
+        /* SCREENS & ANIMATIONS */
+        #stage { height: 100%; overflow-y: auto; padding: 60px 0 100px 0; transition: 0.5s; }
+        .win { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; animation: turnstile 0.4s forwards; }
+        .win.active { display: flex; }
+        
+        @keyframes turnstile { from { transform: rotateY(-90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
+        @keyframes flutter { from { transform: translate3d(60px, 120px, -200px); opacity: 0; } to { transform: translate3d(0,0,0); opacity: 1; } }
+
+        /* TILES */
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 85px; grid-gap: 12px; padding: 0 20px; }
+        .tile { 
+            background: var(--accent); grid-column: span 2; grid-row: span 2; position: relative;
+            display: flex; align-items: center; justify-content: center; font-size: 45px;
+            animation: flutter 0.7s cubic-bezier(0.1, 0.7, 0.1, 1) both;
+            transition: 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+        .tile:active { transform: scale(0.9) rotateY(10deg); }
+        .tile.small { grid-column: span 1; grid-row: span 1; font-size: 20px; }
+        .tile.wide { grid-column: span 4; grid-row: span 2; }
+        .label { position: absolute; bottom: 5px; left: 10px; font-size: 11px; text-transform: lowercase; }
+
+        /* STORE UI */
+        #store-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; overflow-y: auto; height: 100%; }
+        .app-card { background: #111; border: 1px solid #333; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+
+        /* NAV BAR */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 65px; background: #000; display: flex; z-index: 9000; justify-content: space-around; align-items: center; }
+        .nav-item { font-size: 28px; width: 33%; text-align: center; }
+    </style>
+</head>
+<body onload="boot()">
+
+    <div id="vol-bar">ringer + notifications <span style="margin-left:auto">15/30</span></div>
+    <div id="tray" ontouchstart="toggleNotif()">📶 LTE 🔋 <span id="clock">12:00</span></div>
+
+    <div id="action-center" ontouchstart="toggleNotif()">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+            <div style="background:var(--accent); aspect-ratio:1; display:flex; align-items:center; justify-content:center;">📶</div>
+            <div style="background:var(--accent); aspect-ratio:1; display:flex; align-items:center; justify-content:center;">🌙</div>
+            <div style="background:#333; aspect-ratio:1; display:flex; align-items:center; justify-content:center;">✈️</div>
+            <div style="background:var(--accent); aspect-ratio:1; display:flex; align-items:center; justify-content:center;">🔓</div>
+        </div>
+        <h2 style="font-weight:100; margin-top:30px;">LUIMA 2.0</h2>
+        <p style="color:#666">No notifications</p>
+    </div>
+
+    <div id="stage">
+        <h1 style="font-size:65px; font-weight:100; margin:0 0 20px 25px; letter-spacing:-3px;">start</h1>
+        <div class="grid" id="main-grid">
+            <div class="tile" style="animation-delay:0.1s" oncontextmenu="resize(this); return false;" onclick="openW('settings')">⚙️<span class="label">Settings</span></div>
+            <div class="tile small" style="animation-delay:0.15s" onclick="resize(this)">💬</div>
+            <div class="tile small" style="animation-delay:0.2s" onclick="resize(this)">📞</div>
+            <div class="tile wide" style="animation-delay:0.25s" onclick="openW('store')">🛍️<span class="label">Store</span></div>
+        </div>
+    </div>
+
+    <div id="win-settings" class="win"><h1 style="font-size:50px; padding:40px 20px; font-weight:100;">settings</h1></div>
+    <div id="win-store" class="win">
+        <h1 style="font-size:50px; padding:40px 20px; font-weight:100;">store</h1>
+        <div id="store-list"></div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item" onclick="vib(); closeAll()">⬅️</div>
+        <div class="nav-item" onclick="vib(); location.reload()">🏁</div>
+        <div class="nav-item" onclick="vib(); showVol()">🔍</div>
+    </div>
+
+    <script>
+        function boot() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            loadStore();
+        }
+
+        function updateClock() {
+            const d = new Date();
+            document.getElementById('clock').innerText = d.getHours() + ":" + (d.getMinutes()<10?'0':'')+d.getMinutes();
+        }
+
+        function vib() { if(navigator.vibrate) navigator.vibrate(40); }
+
+        function toggleNotif() { document.getElementById('action-center').classList.toggle('active'); }
+
+        function showVol() {
+            const v = document.getElementById('vol-bar');
+            v.classList.add('show');
+            setTimeout(() => v.classList.remove('show'), 2000);
+        }
+
+        function resize(el) {
+            vib();
+            if (el.classList.contains('small')) { el.classList.remove('small'); }
+            else if (el.classList.contains('wide')) { el.classList.remove('wide'); el.classList.add('small'); }
+            else { el.classList.add('wide'); }
+        }
+
+        function openW(id) {
+            vib();
+            document.getElementById('win-'+id).classList.add('active');
+        }
+
+        function closeAll() { document.querySelectorAll('.win').forEach(w => w.classList.remove('active')); }
+
+        function loadStore() {
+            const list = document.getElementById('store-list');
+            const apps = ["WhatsApp", "Roblox", "Facebook", "Instagram", "Minecraft", "YouTube", "Spotify", "TikTok", "Discord", "Telegram"];
+            for (let i = 1; i <= 199; i++) {
+                const name = apps[i % apps.length] + (i > 10 ? " "+i : "");
+                const div = document.createElement('div');
+                div.className = "app-card";
+                div.innerHTML = `<div style="font-size:30px">📦</div><div style="font-size:12px">${name}</div><div style="color:var(--accent); font-size:10px; margin-top:5px;">GET</div>`;
+                div.onclick = () => { vib(); alert("Installing " + name + "..."); };
+                list.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>

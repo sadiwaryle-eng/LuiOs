@@ -3,250 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LUIMA Emulator | Infinite Heritage</title>
+    <title>LUIMA OS</title>
     <style>
         :root { --accent: #1ba1e2; --bg: #000; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI Light", "Segoe WP", sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
-        html, body { width: 100%; height: 100%; background: #111; color: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; user-select: none; }
+        html, body { width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden; position: fixed; }
 
-        /* EMULATOR SHELL */
-        #emu-shell { position: relative; background: #000; border-radius: 40px; box-shadow: 0 0 0 12px #222, 0 30px 100px rgba(0,0,0,0.8); overflow: hidden; transition: 0.5s cubic-bezier(0.1, 0.7, 0.1, 1); }
-        #emu-screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: #000; }
-        #emu-status { height: 25px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 11px; font-weight: bold; z-index: 10000; position: relative; }
+        /* SETUP WIZARD */
+        #setup-wizard { position: fixed; inset: 0; background: var(--accent); z-index: 20000; display: none; flex-direction: column; padding: 60px 30px; }
+        .setup-title { font-size: 50px; font-weight: 100; margin-bottom: 20px; }
+        .setup-input { background: none; border: 2px solid #fff; padding: 15px; color: #fff; font-size: 20px; margin-top: 20px; outline: none; }
+        .setup-btn { background: #fff; color: var(--accent); padding: 15px; text-align: center; margin-top: auto; font-weight: bold; font-size: 18px; }
 
-        /* BOOT & LOCK */
-        #boot { position: absolute; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.8s; }
-        .nokia-logo { font-size: 32px; font-weight: bold; letter-spacing: 5px; margin-bottom: 10px; }
-        
-        #lockscreen { position: absolute; inset: 0; background: url('https://picsum.photos/1080/1920?grayscale') center/cover; z-index: 15000; display: flex; flex-direction: column; justify-content: flex-end; padding: 60px 30px; transition: 0.5s cubic-bezier(0.1, 0.7, 0.1, 1); }
-        #lockscreen.hide { transform: translateY(-100%); }
+        /* BOOT SCREEN */
+        #boot { position: fixed; inset: 0; background: #000; z-index: 15000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.8s; }
+        .nokia { font-size: 40px; font-weight: bold; letter-spacing: 5px; }
 
-        /* PANORAMA ENGINE */
-        #panorama { display: flex; width: 500vw; height: 100%; transition: transform 0.5s cubic-bezier(0.1, 0.7, 0.1, 1); will-change: transform; }
-        .hub { width: 100vw; height: 100%; padding: 50px 20px 120px; overflow-y: auto; position: relative; }
-        .hub-title { font-size: 90px; font-weight: 100; opacity: 0.1; position: absolute; top: -10px; left: 15px; white-space: nowrap; pointer-events: none; }
-        .section-header { font-size: 50px; font-weight: 100; margin-bottom: 25px; letter-spacing: -2px; }
+        /* LOCKSCREEN */
+        #lockscreen { position: fixed; inset: 0; z-index: 9000; background: url('https://picsum.photos/1080/1920?grayscale') center/cover; display: flex; flex-direction: column; justify-content: flex-end; padding: 60px 40px; transition: 0.5s cubic-bezier(0.1, 0.7, 0.1, 1); }
+        #lockscreen.unlocked { transform: translateY(-100%); }
+
+        /* PANORAMA */
+        #panorama { display: flex; width: 300vw; height: 100%; transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); will-change: transform; }
+        .hub { width: 100vw; height: 100%; padding: 80px 25px 120px; overflow-y: auto; position: relative; }
+        .hub-label { font-size: 100px; font-weight: 100; opacity: 0.15; position: absolute; top: -10px; left: 15px; white-space: nowrap; }
 
         /* TILES */
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 85px; gap: 12px; }
-        .tile { background: var(--accent); grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 40px; position: relative; transition: 0.2s; }
-        .tile.small { grid-column: span 1; grid-row: span 1; font-size: 24px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 90px; grid-gap: 15px; }
+        .tile { background: var(--accent); grid-column: span 2; grid-row: span 2; position: relative; display: flex; align-items: center; justify-content: center; font-size: 45px; transition: 0.2s; }
         .tile.wide { grid-column: span 4; }
-        .tile:active { transform: scale(0.92) rotateY(10deg); }
-        .label { position: absolute; bottom: 8px; left: 10px; font-size: 11px; font-weight: bold; text-transform: lowercase; }
+        .tile.small { grid-column: span 1; grid-row: span 1; font-size: 24px; }
+        .label { position: absolute; bottom: 8px; left: 10px; font-size: 12px; font-weight: bold; text-transform: lowercase; }
 
-        /* HUB SPECIFIC */
-        .list-item { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #111; font-size: 22px; font-weight: 100; }
-        .list-item:active { background: #222; }
-        .icon-box { width: 55px; height: 55px; background: #222; display: flex; align-items: center; justify-content: center; }
-
-        /* WINDOW SYSTEM */
-        .win { position: absolute; inset: 0; background: #000; z-index: 12000; transform: translateX(100%); transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); padding: 50px 20px; display: flex; flex-direction: column; }
-        .win.show { transform: translateX(0); }
-
-        /* NAV BAR */
-        .nav { position: absolute; bottom: 0; width: 100%; height: 65px; background: #000; display: flex; z-index: 18000; border-top: 1px solid #111; }
-        .btn { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; }
-        
-        /* CONTROLS */
-        #emu-controls { position: fixed; top: 10px; left: 10px; z-index: 30000; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; }
-        select { background: #222; color: #fff; border: none; padding: 5px; }
+        /* NAV */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: #000; display: flex; z-index: 10000; border-top: 1px solid #111; }
+        .nav-btn { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 30px; }
     </style>
 </head>
-<body onload="init()">
+<body onload="boot()">
 
-    <div id="emu-controls">
-        <select onchange="setDevice(this.value)">
-            <option value="lumia920">Nokia Lumia 920</option>
-            <option value="s9">Samsung S9</option>
-            <option value="tablet">Tablet Mode</option>
-            <option value="full">Fullscreen</option>
-        </select>
-        <button onclick="rotate()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">🔄</button>
+    <div id="setup-wizard">
+        <h1 class="setup-title">welcome</h1>
+        <p>Let's set up your LUIMA device.</p>
+        <input type="text" id="user-name" class="setup-input" placeholder="Enter your name">
+        <div class="setup-btn" onclick="completeSetup()">get started</div>
     </div>
 
-    <div id="emu-shell">
-        <div id="emu-status">
-            <span>📶 LTE</span>
-            <span id="stat-time">12:00</span>
-            <span>🔋 100%</span>
+    <div id="boot">
+        <div class="nokia">NOKIA</div>
+    </div>
+
+    <div id="lockscreen" onclick="unlock()">
+        <h1 id="l-time" style="font-size: 90px; font-weight: 100;">12:00</h1>
+        <p id="l-date" style="font-size: 22px; opacity: 0.8;"></p>
+    </div>
+
+    <div id="panorama">
+        <div class="hub">
+            <h1 style="font-size: 60px; font-weight: 100; margin-bottom: 30px;">start</h1>
+            <div class="grid">
+                <div class="tile wide">
+                    🎮 <span class="label">games (PS Vita & PSP)</span>
+                </div>
+                <div class="tile" onclick="nav(1)">
+                    👤 <span class="label">people</span>
+                </div>
+                <div class="tile" onclick="alert('Marketplace')">
+                    🛍️ <span class="label">marketplace</span>
+                </div>
+                <div class="tile small">⚙️</div>
+                <div class="tile small">📧</div>
+            </div>
         </div>
 
-        <div id="emu-screen">
-            <div id="boot">
-                <div class="nokia-logo">NOKIA</div>
-                <div style="font-size:10px; color:var(--accent); letter-spacing:2px;">LUIMA OS 2.0</div>
-            </div>
-
-            <div id="lockscreen" onclick="unlock()">
-                <h1 id="lock-time" style="font-size:85px; font-weight:100; line-height:1;">12:00</h1>
-                <p id="lock-date" style="font-size:22px; opacity:0.7;"></p>
-                <p style="font-size:12px; margin-top:40px; opacity:0.5;">Tap to unlock</p>
-            </div>
-
-            <div id="panorama">
-                <div class="hub">
-                    <h1 class="section-header">start</h1>
-                    <div class="grid">
-                        <div class="tile" onclick="openApp('store')">🛍️<span class="label">marketplace</span></div>
-                        <div class="tile" onclick="nav(1)">👤<span class="label">people</span></div>
-                        <div class="tile wide" onclick="nav(2)">🎵<span class="label">music+video</span></div>
-                        <div class="tile small" onclick="openApp('office')">📘</div>
-                        <div class="tile small" onclick="openApp('games')">🎮</div>
-                        <div class="tile small" onclick="openApp('settings')">⚙️</div>
-                        <div class="tile small" onclick="alert('Search...')">🔍</div>
-                    </div>
-                </div>
-
-                <div class="hub">
-                    <div class="hub-title">people</div>
-                    <h1 class="section-header" style="margin-top:35px;">what's new</h1>
-                    <div class="list-item">
-                        <div class="icon-box">👤</div>
-                        <div><b>Luis</b><br><small>Samsung S9 Connected</small></div>
-                    </div>
-                    <div class="list-item">
-                        <div class="icon-box" style="background:var(--accent)">📱</div>
-                        <div><b>HTC NIKI</b><br><small>Nugget Mode Active</small></div>
-                    </div>
-                </div>
-
-                <div class="hub">
-                    <div class="hub-title" style="color:#e06000; opacity:0.2;">zune</div>
-                    <h1 class="section-header" style="margin-top:35px;">collection</h1>
-                    <div class="list-item">🎵 music</div>
-                    <div class="list-item">🎬 videos</div>
-                    <div class="list-item">📻 podcasts</div>
-                </div>
-
-                <div class="hub">
-                    <div class="hub-title" style="color:#2b579a; opacity:0.2;">office</div>
-                    <h1 class="section-header" style="margin-top:35px;">documents</h1>
-                    <div class="list-item">📝 Word Mobile</div>
-                    <div class="list-item">📊 Excel Mobile</div>
-                    <div class="list-item">📓 OneNote</div>
-                </div>
-            </div>
-
-            <div id="win-store" class="win">
-                <h1 class="section-header">marketplace</h1>
-                <div id="app-list" style="overflow-y:auto;"></div>
-            </div>
-
-            <div id="win-settings" class="win">
-                <h1 class="section-header">settings</h1>
-                <p>Accent Color</p>
-                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:20px 0;">
-                    <div style="background:#1ba1e2; height:40px" onclick="setAccent('#1ba1e2')"></div>
-                    <div style="background:#a200ff; height:40px" onclick="setAccent('#a200ff')"></div>
-                    <div style="background:#00a300; height:40px" onclick="setAccent('#00a300')"></div>
-                    <div style="background:#e51400; height:40px" onclick="setAccent('#e51400')"></div>
-                </div>
-                <p>Device Collection</p>
-                <small>S9, M31, LG Nugget</small>
-            </div>
-
-            <div id="win-games" class="win">
-                <h1 class="section-header" style="color:#107c10">xbox live</h1>
-                <div class="list-item">🏆 500G Achievements</div>
-                <div class="list-item">🕹️ Minecraft</div>
-                <div class="list-item">🕹️ Halo Waypoint</div>
-            </div>
-
-            <div class="nav">
-                <div class="btn" onclick="back()">⬅️</div>
-                <div class="btn" onclick="home()">🏁</div>
-                <div class="btn" onclick="nav(1)">🔍</div>
+        <div class="hub">
+            <div class="hub-label">people</div>
+            <h1 style="font-size: 60px; font-weight: 100; margin-top: 40px;">what's new</h1>
+            <div style="margin-top:20px; padding:20px; background:#111; border-left:5px solid var(--accent)">
+                <b id="display-name">User</b><br>Samsung Galaxy Collection
             </div>
         </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-btn" onclick="nav(0)">⬅️</div>
+        <div class="nav-btn" onclick="home()">🏁</div>
+        <div class="nav-btn">🔍</div>
     </div>
 
     <script>
-        let stack = [];
-        let isRotated = false;
+        function boot() {
+            const hasSetup = localStorage.getItem('luima_setup');
+            
+            setTimeout(() => {
+                document.getElementById('boot').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('boot').style.display = 'none';
+                    if (!hasSetup) {
+                        document.getElementById('setup-wizard').style.display = 'flex';
+                    }
+                }, 800);
+            }, 2500);
 
-        function init() {
-            setTimeout(() => { document.getElementById('boot').style.opacity = 0; }, 2000);
-            setTimeout(() => { document.getElementById('boot').style.display = 'none'; }, 2800);
-            updateClock();
-            setInterval(updateClock, 1000);
-            genApps();
-            setDevice('lumia920');
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            if(hasSetup) {
+                document.getElementById('display-name').innerText = localStorage.getItem('luima_user');
+            }
         }
 
-        function updateClock() {
+        function completeSetup() {
+            const name = document.getElementById('user-name').value || "Luis";
+            localStorage.setItem('luima_setup', 'true');
+            localStorage.setItem('luima_user', name);
+            document.getElementById('display-name').innerText = name;
+            document.getElementById('setup-wizard').style.display = 'none';
+            vibrate();
+        }
+
+        function updateTime() {
             const d = new Date();
-            const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            document.getElementById('lock-time').innerText = t;
-            document.getElementById('stat-time').innerText = t;
-            document.getElementById('lock-date').innerText = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+            const t = d.getHours() + ":" + (d.getMinutes()<10?'0':'') + d.getMinutes();
+            document.getElementById('l-time').innerText = t;
+            document.getElementById('l-date').innerText = d.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
         }
 
-        function unlock() {
-            vibrate();
-            document.getElementById('lockscreen').classList.add('hide');
-        }
-
-        function nav(i) {
-            vibrate();
-            document.getElementById('panorama').style.transform = `translateX(-${i * 100}vw)`;
-        }
-
-        function openApp(id) {
-            vibrate();
-            document.getElementById('win-' + id).classList.add('show');
-            stack.push(id);
-        }
-
-        function back() {
-            vibrate();
-            const id = stack.pop();
-            if (id) document.getElementById('win-' + id).classList.remove('show');
-        }
-
-        function home() {
-            vibrate();
-            document.querySelectorAll('.win').forEach(w => w.classList.remove('show'));
-            nav(0);
-            stack = [];
-        }
-
-        function setAccent(c) {
-            document.documentElement.style.setProperty('--accent', c);
-            vibrate();
-        }
-
-        function genApps() {
-            const list = document.getElementById('app-list');
-            const apps = ["WhatsApp", "Facebook", "Instagram", "Roblox", "Spotify", "YouTube", "Minecraft", "Twitter"];
-            for (let i = 1; i <= 199; i++) {
-                const name = apps[i % apps.length] + " " + i;
-                const div = document.createElement('div');
-                div.className = "list-item";
-                div.innerHTML = `<div class="icon-box">📦</div> <div>${name}</div>`;
-                list.appendChild(div);
-            }
-        }
-
-        function setDevice(d) {
-            const shell = document.getElementById('emu-shell');
-            if (d === 'full') {
-                shell.style.width = "100vw"; shell.style.height = "100vh"; shell.style.borderRadius = "0";
-            } else if (d === 's9') {
-                shell.style.width = "360px"; shell.style.height = "740px"; shell.style.borderRadius = "35px";
-            } else if (d === 'tablet') {
-                shell.style.width = "800px"; shell.style.height = "600px"; shell.style.borderRadius = "20px";
-            } else {
-                shell.style.width = "380px"; shell.style.height = "680px"; shell.style.borderRadius = "40px";
-            }
-        }
-
-        function rotate() {
-            isRotated = !isRotated;
-            document.getElementById('emu-shell').style.transform = isRotated ? "rotate(90deg) scale(0.8)" : "rotate(0deg) scale(1)";
-        }
-
-        function vibrate() { if (navigator.vibrate) navigator.vibrate(30); }
+        function unlock() { vibrate(); document.getElementById('lockscreen').classList.add('unlocked'); }
+        function nav(i) { vibrate(); document.getElementById('panorama').style.transform = `translateX(-${i*100}vw)`; }
+        function home() { vibrate(); nav(0); }
+        function vibrate() { if(navigator.vibrate) navigator.vibrate(40); }
     </script>
 </body>
 </html>

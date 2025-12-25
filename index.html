@@ -1,143 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Luima 2.0 Air</title>
-    <style>
-        :root { --accent: #1ba1e2; --bg: #000; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI Light', 'Segoe UI', sans-serif; user-select: none; }
-        body, html { margin: 0; padding: 0; height: 100%; background: #000; color: #fff; overflow: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>LUIMA Emulator</title>
 
-        /* BOOT SCREEN */
-        #boot { position: fixed; inset: 0; background: #000; z-index: 10000000; display: flex; align-items: center; justify-content: center; transition: opacity 1s; }
-        #boot h1 { font-weight: 100; font-size: 40px; letter-spacing: 5px; color: #fff; }
+<style>
+:root { --accent:#1ba1e2; }
 
-        /* GOODBYE / SHUTDOWN */
-        #shutdown-screen { position: fixed; top: -100%; left: 0; width: 100%; height: 100%; background: var(--accent); z-index: 9000000; display: flex; align-items: center; justify-content: center; transition: top 0.6s cubic-bezier(0.1, 0.7, 0.1, 1); }
-        #shutdown-screen.active { top: 0; }
+*{
+    margin:0; padding:0; box-sizing:border-box;
+    font-family:"Segoe UI",sans-serif;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+}
 
-        /* LOCKSCREEN */
-        #lockscreen { position: fixed; inset: 0; background: url('https://picsum.photos/id/230/800/1200') center/cover; z-index: 8000000; transition: transform 0.5s cubic-bezier(0.1, 0.7, 0.1, 1); display: flex; flex-direction: column; justify-content: flex-end; padding: 40px; }
-        #lockscreen.unlocked { transform: translateY(-100%); }
+html,body{
+    width:100%; height:100%;
+    background:#000;
+    color:#fff;
+    overflow:hidden;
+}
 
-        /* STATUS TRAY */
-        #tray { position: fixed; top: 0; width: 100%; height: 26px; display: flex; justify-content: flex-end; align-items: center; padding: 0 15px; font-size: 11px; z-index: 7000000; gap: 8px; font-weight: bold; }
+/* ================= EMULATOR ================= */
 
-        /* NAV STAGE */
-        #stage { display: flex; width: 200vw; height: 100%; transition: transform 0.45s cubic-bezier(0.1, 0.7, 0.1, 1); }
-        .screen { width: 100vw; height: 100%; overflow-y: auto; padding: 50px 0 80px 0; }
-        .wp-title { font-size: 65px; font-weight: 100; margin: 0 0 20px 25px; letter-spacing: -3px; }
+#emu-shell{
+    position:relative;
+    margin:auto;
+    background:#000;
+    border-radius:35px;
+    box-shadow:0 0 0 10px #111, 0 30px 80px rgba(0,0,0,.7);
+    overflow:hidden;
+}
 
-        /* TILES + TILT */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 12px; padding: 0 25px; width: 100%; }
-        .tile { 
-            background: var(--accent); aspect-ratio: 1/1; position: relative; 
-            display: flex; align-items: center; justify-content: center; font-size: 40px;
-            transition: transform 0.1s; transform-origin: center;
-        }
-        .tile:active { transform: scale(0.9) rotateX(10deg); }
-        .tile.wide { grid-column: span 2; aspect-ratio: 2.1/1; }
-        .label { position: absolute; bottom: 8px; left: 10px; font-size: 12px; font-weight: bold; }
+#emu-status{
+    height:28px;
+    background:#000;
+    border-bottom:1px solid #222;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 10px;
+    font-size:12px;
+}
 
-        /* WINDOWS (TURNSTILE) */
-        .win { position: fixed; inset: 0; background: #000; z-index: 5000000; display: none; flex-direction: column; padding-top: 40px; }
-        .win.active { display: flex; animation: turnstile 0.4s forwards; }
-        @keyframes turnstile { from { transform: translateX(50%) rotateY(-60deg); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+#emulator{
+    width:100%;
+    height:calc(100% - 28px);
+    overflow:hidden;
+}
 
-        /* NAV BAR */
-        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: #000; display: flex; z-index: 7500000; justify-content: space-around; align-items: center; border-top: 1px solid #222; }
-        .nav-item { width: 33%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        
-        .row { padding: 18px 25px; font-size: 26px; font-weight: 200; border-bottom: 1px solid #111; }
-    </style>
+/* Emulator Control Bar */
+#emu-bar{
+    position:fixed;
+    top:10px;
+    right:10px;
+    background:#000;
+    border:1px solid #222;
+    padding:8px;
+    border-radius:10px;
+    z-index:20000;
+}
+#emu-bar select,
+#emu-bar button{
+    background:#111;
+    color:#fff;
+    border:none;
+    padding:6px;
+    margin-left:4px;
+}
+
+/* ================= LUIMA OS ================= */
+
+#boot{
+    position:fixed;
+    inset:0;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:32px;
+    letter-spacing:6px;
+    z-index:9999;
+    transition:.5s;
+}
+
+#lockscreen{
+    position:fixed;
+    inset:0;
+    background:#111 url("https://picsum.photos/1080/1920") center/cover;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    padding:50px;
+    z-index:9000;
+    transition:transform .4s cubic-bezier(.1,.7,.1,1);
+}
+#lockscreen.hide{ transform:translateY(-100%); }
+
+#panorama{
+    display:flex;
+    width:200vw;
+    height:100%;
+    transition:.35s cubic-bezier(.1,.7,.1,1);
+    will-change:transform;
+}
+
+.hub{
+    width:100vw;
+    padding:60px 20px 120px;
+    overflow-y:auto;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-auto-rows:85px;
+    gap:15px;
+}
+
+.tile{
+    background:var(--accent);
+    grid-column:span 2;
+    grid-row:span 2;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+    position:relative;
+    transition:.15s;
+    animation:pulse 6s infinite;
+}
+.tile.small{
+    grid-column:span 1;
+    grid-row:span 1;
+    font-size:24px;
+}
+.tile:active{ transform:scale(.9); }
+
+.label{
+    position:absolute;
+    bottom:8px;
+    left:10px;
+    font-size:11px;
+    font-weight:bold;
+}
+
+@keyframes pulse{
+    0%,100%{filter:brightness(1);}
+    50%{filter:brightness(1.2);}
+}
+
+/* Apps */
+.win{
+    position:fixed;
+    inset:0;
+    background:#000;
+    transform:translateX(100%);
+    transition:.3s cubic-bezier(.1,.7,.1,1);
+    z-index:8000;
+    padding:40px 20px;
+}
+.win.show{ transform:translateX(0); }
+
+/* Nav Bar */
+.nav{
+    position:fixed;
+    bottom:0;
+    width:100%;
+    height:65px;
+    background:#000;
+    border-top:1px solid #222;
+    display:flex;
+    z-index:10000;
+}
+.btn{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+}
+</style>
 </head>
-<body onload="initSystem()">
 
-    <div id="boot"><h1>NOKIA</h1></div>
+<body onload="boot()">
 
-    <div id="shutdown-screen"><h1>goodbye</h1></div>
+<!-- Emulator Bar -->
+<div id="emu-bar">
+    <select onchange="setDevice(this.value)">
+        <option value="lumia520">Lumia 520</option>
+        <option value="lumia920" selected>Lumia 920</option>
+        <option value="android">Android</option>
+        <option value="tablet">Tablet</option>
+        <option value="desktop">Desktop</option>
+        <option value="full">Fullscreen</option>
+    </select>
+    <button onclick="rotate()">🔄</button>
+</div>
 
-    <div id="lockscreen" onclick="unlock()">
-        <div style="font-size:80px; font-weight:100;" id="l-time">12:00</div>
-        <div style="font-size:20px; text-transform:lowercase;">Wednesday, Dec 24</div>
-        <div style="margin-top:20px;">✉️ 5 &nbsp; 💬 2</div>
+<!-- Emulator Shell -->
+<div id="emu-shell">
+    <div id="emu-status">
+        <span>📶 LTE</span>
+        <span id="emu-time">12:00</span>
+        <span>🔋 92%</span>
     </div>
 
-    <div id="tray">📶 LTE 🔋 <span id="clock">12:00</span></div>
+    <div id="emulator">
 
-    <div id="stage">
-        <div class="screen">
-            <h1 class="wp-title">start</h1>
-            <div class="grid">
-                <div class="tile" onclick="openW('store')">🛍️<span class="label">Store</span></div>
-                <div class="tile" onclick="openW('roblox')">🧱<span class="label">Roblox</span></div>
-                <div class="tile wide" onclick="openW('settings')">⚙️<span class="label">Settings</span></div>
-                <div class="tile" onclick="openW('ie')">🌐<span class="label">Internet Explorer</span></div>
-                <div class="tile" onclick="openW('zune')">🎵<span class="label">Zune</span></div>
+        <div id="boot">NOKIA</div>
+
+        <div id="lockscreen">
+            <h1 id="time" style="font-size:80px;font-weight:100"></h1>
+            <p id="date" style="font-size:20px;opacity:.8"></p>
+        </div>
+
+        <div id="panorama">
+            <div class="hub">
+                <h1 style="font-size:55px;font-weight:100;margin-bottom:25px">start</h1>
+                <div class="grid">
+                    <div class="tile" onclick="openApp('store')">🛍️<span class="label">store</span></div>
+                    <div class="tile" onclick="nav(1)">👤<span class="label">people</span></div>
+                    <div class="tile small" onclick="openApp('settings')">⚙️</div>
+                    <div class="tile small">🔍</div>
+                    <div class="tile" style="grid-column:span 4">🖼️<span class="label">pictures</span></div>
+                </div>
             </div>
-            <div style="text-align:right; padding:40px;" onclick="nav(1)">➡️</div>
+
+            <div class="hub">
+                <h1 style="font-size:55px;font-weight:100">people</h1>
+                <div style="background:#111;padding:20px;border-left:4px solid var(--accent)">
+                    <b>Luis</b><br>Samsung S9 & M31 Collection
+                </div>
+            </div>
         </div>
-        <div class="screen">
-            <h1 class="wp-title" style="margin-left:50px">apps</h1>
-            <div class="row" onclick="openW('ie')">internet explorer</div>
-            <div class="row" onclick="openW('roblox')">roblox 2011</div>
-            <div class="row" onclick="openW('settings')">settings</div>
-            <div class="row" onclick="openW('store')">store</div>
+
+        <div id="win-store" class="win">
+            <h1 style="font-size:50px;font-weight:100">marketplace</h1>
+            <div id="store"></div>
         </div>
+
+        <div id="win-settings" class="win">
+            <h1 style="font-size:50px;font-weight:100">settings</h1>
+            <p style="margin-top:20px">Accent Color</p>
+            <input type="color" onchange="setAccent(this.value)">
+        </div>
+
+        <div class="nav">
+            <div class="btn" onclick="back()">⬅️</div>
+            <div class="btn" onclick="home()">🏁</div>
+            <div class="btn">🔍</div>
+        </div>
+
     </div>
+</div>
 
-    <div id="win-settings" class="win">
-        <h1 class="wp-title" style="font-size:40px">settings</h1>
-        <div class="row" onclick="setAccent('#a4c400')">theme: lime</div>
-        <div class="row" onclick="setAccent('#1ba1e2')">theme: cobalt</div>
-        <div class="row" onclick="shutdown()">power off</div>
-    </div>
+<script>
+let stack=[];
+let rotated=false;
 
-    <div id="win-store" class="win">
-        <h1 class="wp-title" style="font-size:40px">store</h1>
-        <div id="store-list" style="overflow-y:auto"></div>
-    </div>
+const devices={
+    lumia520:{w:320,h:533,dpi:1},
+    lumia920:{w:360,h:640,dpi:1},
+    android:{w:393,h:851,dpi:1},
+    tablet:{w:768,h:1024,dpi:.85},
+    desktop:{w:1280,h:800,dpi:.8}
+};
 
-    <div class="nav-bar">
-        <div class="nav-item" onclick="vib(); closeW()">⬅️</div>
-        <div class="nav-item" onclick="vib(); goHome()">🏁</div>
-        <div class="nav-item" onclick="vib(); alert('Bing Search')">🔍</div>
-    </div>
+function boot(){
+    setTimeout(()=>bootEl.style.opacity=0,2000);
+    setTimeout(()=>bootEl.style.display="none",2500);
+    clock(); setInterval(clock,1000);
+    loadStore();
+}
+const bootEl=document.getElementById("boot");
 
-    <script>
-        function initSystem() {
-            // Boot sequence
-            setTimeout(() => document.getElementById('boot').style.opacity = '0', 2000);
-            setTimeout(() => document.getElementById('boot').style.display = 'none', 3000);
-            
-            // Store generation
-            const sl = document.getElementById('store-list');
-            for(let i=1; i<=200; i++) sl.innerHTML += `<div class="row">App Bundle ${i}</div>`;
+function clock(){
+    const d=new Date();
+    time.innerText=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    date.innerText=d.toDateString();
+    document.getElementById("emu-time").innerText=time.innerText;
+}
 
-            // Clock
-            setInterval(() => {
-                const d = new Date();
-                const t = d.getHours() + ":" + (d.getMinutes()<10?'0':'')+d.getMinutes();
-                document.getElementById('clock').innerText = t;
-                document.getElementById('l-time').innerText = t;
-            }, 1000);
-        }
+lockscreen.addEventListener("touchstart",e=>startY=e.touches[0].clientY);
+lockscreen.addEventListener("touchend",e=>{
+    if(startY-e.changedTouches[0].clientY>60)
+        lockscreen.classList.add("hide");
+});
 
-        function unlock() { document.getElementById('lockscreen').classList.add('unlocked'); }
-        function vib() { if(navigator.vibrate) navigator.vibrate(40); }
-        function openW(id) {
-            document.querySelectorAll('.win').forEach(w => w.classList.remove('active'));
-            document.getElementById('win-'+id).classList.add('active');
-        }
-        function closeW() { document.querySelectorAll('.win').forEach(w => w.classList.remove('active')); }
-        function goHome() { closeW(); nav(0); }
-        function nav(p) { document.getElementById('stage').style.transform = `translateX(-${p * 100}vw)`; }
-        function setAccent(c) { document.documentElement.style.setProperty('--accent', c); }
-        function shutdown() {
-            document.getElementById('shutdown-screen').classList.add('active');
-            setTimeout(() => { document.body.innerHTML = ""; document.body.style.background="#000"; }, 2500);
-        }
-    </script>
+function nav(i){ panorama.style.transform=`translateX(-${i*100}vw)`; }
+
+function openApp(id){
+    document.getElementById("win-"+id).classList.add("show");
+    stack.push(id);
+}
+function back(){
+    const last=stack.pop();
+    if(last) document.getElementById("win-"+last).classList.remove("show");
+}
+function home(){
+    document.querySelectorAll(".win").forEach(w=>w.classList.remove("show"));
+    panorama.style.transform="translateX(0)";
+    stack=[];
+}
+
+function setAccent(c){
+    document.documentElement.style.setProperty("--accent",c);
+}
+
+function loadStore(){
+    for(let i=1;i<=150;i++){
+        store.innerHTML+=`<div style="padding:15px;border-bottom:1px solid #222">App ${i}</div>`;
+    }
+}
+
+function setDevice(d){
+    const shell=document.getElementById("emu-shell");
+    if(d==="full"){
+        shell.style.width="100vw";
+        shell.style.height="100vh";
+        shell.style.borderRadius="0";
+        shell.style.boxShadow="none";
+        document.documentElement.style.zoom=1;
+        return;
+    }
+    const dev=devices[d];
+    shell.style.width=dev.w+"px";
+    shell.style.height=(dev.h+28)+"px";
+    shell.style.borderRadius="35px";
+    shell.style.boxShadow="0 0 0 10px #111, 0 30px 80px rgba(0,0,0,.7)";
+    document.documentElement.style.zoom=dev.dpi;
+}
+
+function rotate(){
+    rotated=!rotated;
+    document.getElementById("emu-shell").style.transform=
+        rotated?"rotate(90deg)":"rotate(0deg)";
+}
+
+setDevice("lumia920");
+</script>
+
 </body>
 </html>
